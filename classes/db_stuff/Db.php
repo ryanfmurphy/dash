@@ -94,6 +94,16 @@ if (!class_exists('Db')) {
                 return $result;
             }
         }
+
+        public static function sql_get1($query) {
+            $rows = self::sql($query);
+            if (count($rows) >= 1) {
+                return $rows[0];
+            }
+            else {
+                return null;
+            }
+        }
         
         public static function quote($val) {
             $db = Db::conn();
@@ -164,7 +174,8 @@ if (!class_exists('Db')) {
             if (isset($rowVars['where_clauses'])) {
                 $whereClauses = $rowVars['where_clauses'];
                 unset($rowVars['where_clauses']);
-                $sql = self::buildDeleteSql($table_name, $whereClauses);
+                $sql = self::buildDeleteSql($table_name, $rowVars, $whereClauses);
+                die($sql);
                 return self::sql($sql);
                 #return self::queryFetch($sql);
             }
@@ -197,6 +208,7 @@ if (!class_exists('Db')) {
         }
 
         public static function buildDeleteSql($table_name, $whereClauses) {
+
             { # build sql
                 $sql = "delete from $table_name ";
 
@@ -227,8 +239,13 @@ if (!class_exists('Db')) {
             header("Location: $db_viewer_url");
         }
 
-        public static function viewTable($table_name, $whereVars=array()) {
-            $sql = self::buildSelectSql($table_name, $whereVars);
+        public static function viewTable(
+            $table_name, $whereVars=array(), $selectFields=null
+        ) {
+
+            $sql = self::buildSelectSql(
+                $table_name, $whereVars, $selectFields);
+
             return Db::viewQuery($sql);
         }
 
@@ -246,8 +263,17 @@ if (!class_exists('Db')) {
             return $sql;
         }
 
-        public static function buildSelectSql($table_name, $wheres) {
-            $sql = "select * from $table_name";
+        public static function buildSelectSql($table_name, $wheres, $select_fields=null) {
+
+            if ($select_fields === null) {
+                $select_fields = '*';
+            }
+            elseif (is_array($select_fields)) {
+                #todo maybe use val_list fn
+                $select_fields = implode(',', $select_fields);
+            }
+
+            $sql = "select $select_fields from $table_name";
             $sql .= self::buildWhereClause($wheres);
             $sql .= ";";
             return $sql;
